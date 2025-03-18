@@ -24,7 +24,12 @@ export function middleware(request: NextRequest) {
     }
 
     if (password !== process.env.ADMIN_PASSWORD) {
-      return new NextResponse('密码错误', { status: 401 });
+      return new NextResponse('密码错误', {
+        status: 401,
+        headers: {
+          'WWW-Authenticate': 'Basic realm="管理员区域"',
+        },
+      });
     }
   }
 
