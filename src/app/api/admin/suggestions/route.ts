@@ -2,6 +2,17 @@ import { NextResponse } from 'next/server';
 import { redis } from '@/lib/redis';
 import { headers } from 'next/headers';
 
+interface Suggestion {
+  id: string;
+  content: string;
+  createdAt: string;
+  upVotes: number;
+  downVotes: number;
+  hidden?: boolean;
+}
+
+type RedisSuggestion = Record<keyof Suggestion, string>;
+
 // 验证管理员权限
 async function checkAdminAuth() {
   if (!process.env.ADMIN_PASSWORD) {
@@ -37,12 +48,23 @@ export async function GET() {
     // 获取所有建议的详细信息
     const suggestions = await Promise.all(
       suggestionIds.map(async (id) => {
-        const suggestion = await redis.hgetall(`suggestion:${id}`);
-        return suggestion;
+        const suggestion = await redis.hgetall(`suggestion:${id}`) as RedisSuggestion;
+        if (!suggestion || Object.keys(suggestion).length === 0) return null;
+        return {
+          ...suggestion,
+          id,
+          upVotes: parseInt(suggestion.upVotes || '0'),
+          downVotes: parseInt(suggestion.downVotes || '0'),
+          hidden: suggestion.hidden === 'true',
+        } as Suggestion;
       })
     );
 
-    return NextResponse.json(suggestions);
+    // 过滤掉 null 和隐藏的建议
+    const visibleSuggestions = suggestions
+      .filter((s): s is Suggestion => s !== null && !s.hidden);
+
+    return NextResponse.json(visibleSuggestions);
   } catch (error) {
     console.error('获取建议列表时出错:', error);
     return NextResponse.json(
@@ -100,7 +122,7 @@ export async function PATCH(request: Request) {
     }
 
     // 更新建议的隐藏状态
-    await redis.hset(`suggestion:${id}`, { hidden });
+    await redis.hset(`suggestion:${id}`, { hidden: hidden.toString() });
 
     return NextResponse.json({ message: '建议状态已更新' });
   } catch (error) {
