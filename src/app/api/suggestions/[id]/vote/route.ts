@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 import { redis } from '@/lib/redis';
+import { NextRequest } from 'next/server';
 
 export async function POST(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: { id: string } }
 ) {
   try {
+    const params = await context.params;
     const { id: suggestionId } = params;
     const body = await request.json();
     const { type, userId } = body;
