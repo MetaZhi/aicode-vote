@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
@@ -17,13 +17,10 @@ interface Suggestion {
 export function AdminPanel() {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
 
-  useEffect(() => {
-    fetchSuggestions();
-  }, []);
-
-  const fetchSuggestions = async () => {
+  const fetchSuggestions = useCallback(async () => {
     try {
       const response = await fetch('/api/admin/suggestions', {
         headers: {
@@ -33,10 +30,36 @@ export function AdminPanel() {
       if (!response.ok) throw new Error('获取建议失败');
       const data = await response.json();
       setSuggestions(data);
-    } catch (error) {
+    } catch (err) {
+      console.error('获取建议列表失败:', err);
       toast.error('获取建议列表失败');
     } finally {
       setLoading(false);
+    }
+  }, [password]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchSuggestions();
+    }
+  }, [isAuthenticated, fetchSuggestions]);
+
+  const handleLogin = async () => {
+    try {
+      const response = await fetch('/api/admin/suggestions', {
+        headers: {
+          'Authorization': `Basic ${btoa(`admin:${password}`)}`,
+        },
+      });
+      
+      if (response.ok) {
+        setIsAuthenticated(true);
+      } else {
+        toast.error('密码错误');
+      }
+    } catch (err) {
+      console.error('认证失败:', err);
+      toast.error('认证失败');
     }
   };
 
@@ -55,7 +78,8 @@ export function AdminPanel() {
       
       toast.success('建议已删除');
       setSuggestions(suggestions.filter(s => s.id !== id));
-    } catch (error) {
+    } catch (err) {
+      console.error('删除建议失败:', err);
       toast.error('删除建议失败');
     }
   };
@@ -77,10 +101,29 @@ export function AdminPanel() {
       setSuggestions(suggestions.map(s => 
         s.id === id ? { ...s, hidden: !currentHidden } : s
       ));
-    } catch (error) {
+    } catch (err) {
+      console.error('更新建议状态失败:', err);
       toast.error('更新建议状态失败');
     }
   };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="space-y-4">
+        <h2 className="text-2xl font-bold">管理员登录</h2>
+        <div className="space-y-2">
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="请输入管理员密码"
+            className="w-full p-2 border rounded"
+          />
+          <Button onClick={handleLogin}>登录</Button>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return <div>加载中...</div>;
@@ -88,7 +131,12 @@ export function AdminPanel() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-bold">建议管理</h2>
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">建议管理</h2>
+        <Button variant="outline" onClick={() => setIsAuthenticated(false)}>
+          退出登录
+        </Button>
+      </div>
       <div className="grid gap-4">
         {suggestions.map((suggestion) => (
           <Card key={suggestion.id} className={suggestion.hidden ? 'opacity-50' : ''}>
