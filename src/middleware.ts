@@ -7,10 +7,11 @@ export function middleware(request: NextRequest) {
     const authHeader = request.headers.get('authorization');
 
     if (!authHeader || !authHeader.startsWith('Basic ')) {
-      return new NextResponse('需要认证', {
+      return new NextResponse(null, {
         status: 401,
         headers: {
-          'WWW-Authenticate': 'Basic realm="管理员区域"',
+          'WWW-Authenticate': 'Basic realm="管理员区域", charset="UTF-8"',
+          'Cache-Control': 'no-store',
         },
       });
     }
@@ -24,10 +25,11 @@ export function middleware(request: NextRequest) {
     }
 
     if (password !== process.env.ADMIN_PASSWORD) {
-      return new NextResponse('密码错误', {
+      return new NextResponse(null, {
         status: 401,
         headers: {
-          'WWW-Authenticate': 'Basic realm="管理员区域"',
+          'WWW-Authenticate': 'Basic realm="管理员区域", charset="UTF-8"',
+          'Cache-Control': 'no-store',
         },
       });
     }
