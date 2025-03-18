@@ -22,6 +22,7 @@ export async function POST(request: Request) {
       createdAt: new Date().toISOString(),
       upVotes: 0,
       downVotes: 0,
+      hidden: false,
     };
 
     // 将建议存储到 Redis
@@ -57,7 +58,10 @@ export async function GET() {
       })
     );
 
-    return NextResponse.json(suggestions);
+    // 过滤掉隐藏的建议
+    const visibleSuggestions = suggestions.filter(s => !s.hidden);
+
+    return NextResponse.json(visibleSuggestions);
   } catch (error) {
     console.error('获取建议列表时出错:', error);
     return NextResponse.json(
