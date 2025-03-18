@@ -4,17 +4,16 @@ import { NextRequest } from 'next/server';
 
 export async function POST(
   request: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const params = await context.params;
-    const { id: suggestionId } = params;
+    const { id: suggestionId } = await params;
     const body = await request.json();
     const { type, userId } = body;
 
     // 验证请求数据
     if (!type || !['UP', 'DOWN'].includes(type)) {
-      return NextResponse.json(
+      return NextResponse.json( 
         { error: '投票类型无效' },
         { status: 400 }
       );
